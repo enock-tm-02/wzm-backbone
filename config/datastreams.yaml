@@ -1,0 +1,87 @@
+# Registry of every data stream the system reads or writes.
+# `connector` names a class in wzm.connectors; `env` lists the settings it needs.
+# A stream is enabled only when all of its env values are set.
+
+streams:
+  # ---- Must have ----
+  wzdx:
+    description: Work zone events (WZDx v4.x GeoJSON feed)
+    connector: WZDxConnector
+    priority: must
+    mode: poll
+    interval_minutes: 5
+    env: [WZDX_FEED_URL]
+  permits:
+    description: Lane closure permits (planned closures, lanes, times)
+    connector: PermitsConnector
+    priority: must
+    mode: poll
+    interval_minutes: 60
+    env: [PERMITS_API_URL, PERMITS_API_KEY]
+  npmrds:
+    description: NPMRDS probe speeds by TMC segment (historical, monthly)
+    connector: NPMRDSConnector
+    priority: must
+    mode: batch
+    env: [NPMRDS_USERNAME, NPMRDS_PASSWORD]
+  inrix:
+    description: INRIX real-time segment speeds
+    connector: INRIXConnector
+    priority: must   # pick one of INRIX / HERE for live speeds
+    mode: poll
+    interval_minutes: 1
+    env: [INRIX_APP_ID, INRIX_HASH_TOKEN]
+  here:
+    description: HERE Traffic flow (alternative live speed source)
+    connector: HEREConnector
+    priority: optional
+    mode: poll
+    interval_minutes: 1
+    env: [HERE_API_KEY]
+  detectors:
+    description: Loop / radar detector volumes, speeds, occupancy
+    connector: DetectorsConnector
+    priority: must
+    mode: poll
+    interval_minutes: 5
+    env: [DETECTORS_API_URL, DETECTORS_API_KEY]
+
+  # ---- High / medium ----
+  crashes:
+    description: State crash records (location, time, severity)
+    connector: CrashesConnector
+    priority: high
+    mode: batch
+    env: [CRASHES_DB_URL]
+  weather:
+    description: NOAA observations and forecasts
+    connector: WeatherConnector
+    priority: medium
+    mode: poll
+    interval_minutes: 15
+    env: [NOAA_USER_AGENT]
+  events:
+    description: Special events calendar
+    connector: EventsConnector
+    priority: medium
+    mode: poll
+    interval_minutes: 1440
+    env: [EVENTS_API_URL]
+  incidents:
+    description: TMC incident log / 511 incidents
+    connector: IncidentsConnector
+    priority: medium
+    mode: poll
+    interval_minutes: 2
+    env: [INCIDENTS_API_URL, INCIDENTS_API_KEY]
+
+outputs:
+  dms:
+    description: Dynamic message signs (queue warnings, travel times)
+    env: [DMS_API_URL, DMS_API_KEY]
+  ops_511:
+    description: 511 traveler information
+    env: [ALERT_511_URL]
+  email:
+    description: Email alerts to operators
+    env: [SMTP_URL, ALERT_EMAIL_TO]
