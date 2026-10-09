@@ -50,6 +50,20 @@ agency's values. Without internet access to Overpass, pass known detours in `det
 
 API: `POST /scenario/segment`, `POST /scenario/analyze`, `GET /scenario/defaults` (see `/docs`).
 
+### Miami-Dade test case
+
+`tests/fixtures/miami_dade_i95.json` is a hand-built network of I-95 between NW 54th and NW 95th
+Street with NW 7th Avenue and NW 2nd Avenue as parallel arterials (approximate geometry, regenerate
+with `python tests/fixtures/miami_dade_i95.py`). `tests/test_miami_dade.py` runs the whole flow on it
+for a northbound work zone between the NW 62nd and NW 79th Street interchanges: midday and night
+two-lane closures, a night full closure and a shoulder closure. To try it on the map without
+internet access to Overpass:
+
+```bash
+WZM_NETWORK_FILE=tests/fixtures/miami_dade_i95.json uvicorn wzm.api.main:app
+# open http://localhost:8000/map/, zoom to I-95 at NW 62nd-79th St, click the northbound lanes
+```
+
 ## Layout
 
 | Path | What it is | State |

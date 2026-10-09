@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     # Road network for detour routing (OpenStreetMap via Overpass; no key needed)
     overpass_url: str = "https://overpass-api.de/api/interpreter"
+    wzm_network_file: str = ""   # optional saved Overpass JSON to use instead of downloading
 
     # Work zone events
     wzdx_feed_url: str = ""
