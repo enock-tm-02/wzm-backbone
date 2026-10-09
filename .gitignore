@@ -6,3 +6,4 @@ data/raw/*
 data/features/*
 !data/**/.gitkeep
 mlruns/
+*.egg-info/

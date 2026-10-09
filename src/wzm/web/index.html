@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Work Zone Scenarios</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <header>
+      <h1>Work zone scenarios</h1>
+      <p class="muted">Draw a work zone, set the closure, and compare detours, delay, user cost and crash risk.</p>
+    </header>
+
+    <section>
+      <h2>1. Work zone segment</h2>
+      <div class="row">
+        <button id="draw" class="primary">Draw on map</button>
+        <button id="clear">Clear</button>
+      </div>
+      <p id="seg-help" class="muted">Click the upstream end, then the downstream end, in the direction of travel.</p>
+      <p id="seg-info"></p>
+    </section>
+
+    <form id="form">
+      <section>
+        <h2>2. Closure</h2>
+        <label>Facility
+          <select name="facility"><option value="freeway">Freeway</option><option value="arterial">Arterial</option></select>
+        </label>
+        <label>Lanes in this direction <input name="normal_lanes" type="number" min="1" max="8" value="3"></label>
+        <fieldset>
+          <legend>Closure type</legend>
+          <label class="inline"><input type="radio" name="closure" value="lanes" checked> Lane closure</label>
+          <label class="inline"><input type="radio" name="closure" value="shoulder"> Shoulder only</label>
+          <label class="inline"><input type="radio" name="closure" value="none"> Speed reduction only</label>
+        </fieldset>
+        <label id="lanes-closed-wrap">Lanes closed
+          <select name="lanes_closed"></select>
+        </label>
+        <div class="grid2">
+          <label>Normal speed (mph) <input name="free_flow_speed_mph" type="number" min="15" max="85" value="65"></label>
+          <label>Work zone speed (mph) <input name="work_zone_speed_mph" type="number" min="10" max="85" value="55"></label>
+        </div>
+        <label class="inline"><input name="hard_barrier" type="checkbox"> Concrete barrier (not cones / drums)</label>
+      </section>
+
+      <section>
+        <h2>3. Traffic and schedule</h2>
+        <div class="grid2">
+          <label>AADT (both directions) <input name="aadt" type="number" min="100" step="100" value="90000"></label>
+          <label>Trucks (%) <input name="heavy_vehicle_pct" type="number" min="0" max="60" value="8"></label>
+          <label>Start <input name="start" type="time" value="09:00"></label>
+          <label>End <input name="end" type="time" value="15:00"></label>
+          <label>Days of work <input name="days" type="number" min="1" value="1"></label>
+          <label>Max diversion (%) <input name="max_share" type="number" min="0" max="100" value="25"></label>
+        </div>
+        <details>
+          <summary>Cost and safety assumptions</summary>
+          <div class="grid2">
+            <label>Value of time ($/person-h) <input name="vot" type="number" step="0.1"></label>
+            <label>Truck value of time ($/veh-h) <input name="vot_truck" type="number" step="0.1"></label>
+            <label>Car occupancy <input name="occ" type="number" step="0.01"></label>
+            <label>Base crash rate (per M VMT) <input name="crash_rate" type="number" step="0.01"></label>
+          </div>
+          <p class="muted">Defaults come from config/scenario_defaults.yaml and are placeholders to calibrate.</p>
+        </details>
+      </section>
+
+      <button id="run" type="submit" class="primary wide" disabled>Analyze scenario</button>
+    </form>
+
+    <section id="results" hidden>
+      <h2>Results</h2>
+      <p id="recommendation" class="callout"></p>
+      <ul id="warnings"></ul>
+      <div class="tabs" role="tablist">
+        <button type="button" data-view="recommended" class="on">Recommended plan</button>
+        <button type="button" data-view="without_diversion">No diversion</button>
+      </div>
+      <div id="kpis" class="kpis"></div>
+      <h3>Queue over the day</h3>
+      <div id="chart"></div>
+      <h3>Detours</h3>
+      <table id="detours"><thead><tr><th>#</th><th>Via</th><th>+min</th><th>Divert</th><th>Total cost</th></tr></thead><tbody></tbody></table>
+      <p class="muted">Total cost = delay cost + extra vehicle operating cost + cost of crashes added by the work zone, over all days.</p>
+    </section>
+  </aside>
+  <main id="map"></main>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
