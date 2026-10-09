@@ -216,28 +216,33 @@ class RoadNetwork:
         return list(reversed(walked)) if upstream else walked
 
     def alternatives(self, src: int, dst: int, banned: set[tuple[int, int]], k: int = 3,
-                     penalty_factor: float = 1.6, max_overlap: float = 0.8) -> list[Path]:
-        """Up to k distinct paths avoiding `banned`, using the iterative penalty method."""
+                     penalty_factor: float = 1.6, max_overlap: float = 0.8,
+                     common: set[tuple[int, int]] | None = None) -> list[Path]:
+        """Up to k distinct paths avoiding `banned`, using the iterative penalty method.
+        `common` links (the mainline up- and downstream of the zone) are shared by every detour, so
+        they are neither penalised nor counted when comparing two detours."""
+        common = common or set()
         penalty: dict[tuple[int, int], float] = {}
         found: list[Path] = []
         for _ in range(k * 3):
             p = self.shortest_path(src, dst, banned, penalty)
             if p is None:
                 break
-            if all(_overlap(p, q) < max_overlap for q in found):
+            if all(_overlap(p, q, common) < max_overlap for q in found):
                 found.append(p)
                 if len(found) == k:
                     break
-            for key in p.keys:
+            for key in p.keys - common:
                 penalty[key] = penalty.get(key, 1.0) * penalty_factor
         return sorted(found, key=lambda q: q.time_s)
 
 
-def _overlap(a: Path, b: Path) -> float:
-    """Share of a's length that is also on b."""
+def _overlap(a: Path, b: Path, common: set[tuple[int, int]] = frozenset()) -> float:
+    """Share of a's length off the `common` links that is also on b."""
     shared = b.keys
-    total = a.length_m or 1.0
-    return sum(e.length_m for e in a.edges if (e.u, e.v) in shared) / total
+    own = [e for e in a.edges if (e.u, e.v) not in common]
+    total = sum(e.length_m for e in own) or 1.0
+    return sum(e.length_m for e in own if (e.u, e.v) in shared) / total
 
 
 def edges_not_in(path: Path, others: Iterable[tuple[int, int]]) -> list[Edge]:

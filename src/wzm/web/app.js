@@ -207,6 +207,7 @@
       [pct(s.probability_fatal_or_serious_injury), "Chance of a fatal or serious injury crash"],
       [`${fmt(o.vehicles_diverted_per_day)} / day`, `Vehicles diverted (${fmt(r.diversion_share * 100)}%)`],
     ];
+    if (o.max_detour_queued_vehicles > 0) tiles.push([`${fmt(o.max_detour_queued_vehicles)} veh`, "Queue at the detour bottleneck"]);
     const box = $("#kpis");
     box.innerHTML = "";
     tiles.forEach(([v, label]) => {

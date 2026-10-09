@@ -1,6 +1,7 @@
 """Fetches the OpenStreetMap road network around a work zone from an Overpass API.
 
 Responses are cached under $WZM_DATA_DIR/raw/osm so repeat runs on a corridor work offline.
+Set WZM_NETWORK_FILE to a saved Overpass JSON to skip the download entirely.
 """
 import hashlib
 import json
@@ -33,6 +34,8 @@ def overpass_query(south: float, west: float, north: float, east: float, residen
 def fetch_network(coords: list[tuple[float, float]], pad_m: float = 6000, residential: bool = False,
                   settings: Settings | None = None) -> RoadNetwork:
     settings = settings or get_settings()
+    if settings.wzm_network_file:
+        return load_network_file(settings.wzm_network_file)
     s, w, n, e = bbox(coords, pad_m)
     # Round outward to a 0.02 degree grid so nearby requests share one download
     s, w = (math.floor(v / 0.02) * 0.02 for v in (s, w))
@@ -61,3 +64,13 @@ def fetch_network(coords: list[tuple[float, float]], pad_m: float = 6000, reside
         _MEMORY.pop(next(iter(_MEMORY)))
     _MEMORY[q] = g
     return g
+
+
+def load_network_file(path: str) -> RoadNetwork:
+    key = f"file:{path}"
+    if key not in _MEMORY:
+        try:
+            _MEMORY[key] = RoadNetwork.from_osm(json.loads(Path(path).read_text()))
+        except (OSError, ValueError) as exc:
+            raise NetworkUnavailable(f"Could not read WZM_NETWORK_FILE {path}: {exc}") from exc
+    return _MEMORY[key]

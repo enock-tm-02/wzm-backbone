@@ -31,7 +31,7 @@ def find_detours(g: RoadNetwork, zone: Path, params: dict) -> list[dict]:
     origin = through.edges[0].u
     dest = through.edges[-1].v
     out = []
-    for alt in g.alternatives(origin, dest, banned=zone.keys, k=d["alternatives"]):
+    for alt in g.alternatives(origin, dest, banned=zone.keys, k=d["alternatives"], common=through.keys):
         off = edges_not_in(alt, through.keys)
         if not off:
             continue

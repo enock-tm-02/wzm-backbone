@@ -128,12 +128,14 @@ def simulate(sc: Scenario, share: float = 0.0, detour: DetourOption | None = Non
     detour_rate = base_rate.get(detour.facility, base_rate["arterial"]) if detour else 0.0
 
     queued, broken_down = 0.0, False
+    detour_queued = 0.0        # overflow waiting at the detour bottleneck (full closures only)
     tot = dict(queue_vh=0.0, speed_vh=0.0, detour_vh=0.0, arrivals=0.0, diverted=0.0, queued_arrivals=0.0,
-               vmt_zone=0.0, vmt_queue=0.0, vmt_detour=0.0, crashes=0.0, crashes_base=0.0, queue_h=0.0)
+               vmt_zone=0.0, vmt_queue=0.0, vmt_detour=0.0, crashes=0.0, crashes_base=0.0, queue_h=0.0,
+               detour_queue_max=0.0)
     intervals = []
     for i in range(n_max):
         in_closure = i < n_closure
-        if not in_closure and queued <= 0:
+        if not in_closure and queued <= 0 and detour_queued <= 0:
             break
         hour = sc.start_hour + i * INTERVAL_H
         night = _is_night(hour, night_hours)
@@ -152,6 +154,9 @@ def simulate(sc: Scenario, share: float = 0.0, detour: DetourOption | None = Non
             cap = caps["discharge_vph"]
         served = min(main + queued / INTERVAL_H, cap)
         q_prev, queued = queued, max(0.0, queued + (main - served) * INTERVAL_H)
+        if not in_closure and q_prev == 0:
+            # Once the work zone queue has cleared, later congestion is recurring, not the work zone's
+            served, queued = main, 0.0
         if queued == 0:
             broken_down = False
         q_avg = (q_prev + queued) / 2
@@ -172,6 +177,10 @@ def simulate(sc: Scenario, share: float = 0.0, detour: DetourOption | None = Non
         detour_mi = (detour.length_mi or length + detour.extra_miles) if detour else 0.0
         if detour:
             tot["detour_vh"] += diverted * INTERVAL_H * detour.extra_time_min / 60
+            through = min(diverted + detour_queued / INTERVAL_H, detour.spare_capacity_vph)
+            dq_prev, detour_queued = detour_queued, max(0.0, detour_queued + (diverted - through) * INTERVAL_H)
+            tot["detour_vh"] += (dq_prev + detour_queued) / 2 * INTERVAL_H
+            tot["detour_queue_max"] = max(tot["detour_queue_max"], detour_queued)
             tot["vmt_detour"] += diverted * INTERVAL_H * detour_mi
         cmf = _crash_cmf(sc, night) if in_closure else 1.0
         tot["crashes"] += rate * cmf * served_veh * length / 1e6
@@ -189,6 +198,7 @@ def simulate(sc: Scenario, share: float = 0.0, detour: DetourOption | None = Non
             "capacity_vph": round(cap),
             "queued_vehicles": round(queued, 1),
             "queue_miles": round(q_miles, 2),
+            "detour_queued_vehicles": round(detour_queued, 1),
         })
     tot["intervals"] = intervals
     tot["cost"] = user_cost(sc, tot, share, detour)
@@ -245,6 +255,7 @@ def summarize(sc: Scenario, run: dict, share: float = 0.0) -> dict:
             "vehicles_in_window_per_day": round(run["arrivals"]),
             "vehicles_in_queue_per_day": round(run["queued_arrivals"]),
             "vehicles_diverted_per_day": round(run["diverted"]),
+            "max_detour_queued_vehicles": round(run["detour_queue_max"]),
             "delay_veh_hours_per_day": round(delay_vh, 1),
             "delay_breakdown_veh_hours": {"queue": round(run["queue_vh"], 1),
                                           "reduced_speed": round(run["speed_vh"], 1),
