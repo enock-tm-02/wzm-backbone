@@ -22,6 +22,34 @@ curl -X POST localhost:8000/predict/baseline -H 'content-type: application/json'
   -d '{"normal_lanes":3,"open_lanes":1,"demand_vph":[3000,3000,1500,1000]}'
 ```
 
+## Scenario analysis map
+
+`uvicorn wzm.api.main:app` then open http://localhost:8000/map/ (the root URL redirects there).
+
+1. Click **Draw on map**, then the upstream and downstream ends of the work zone in the direction of
+   travel. The segment follows the OpenStreetMap road and pre-fills lanes and speed.
+2. Choose a lane closure (any number of lanes, up to a full closure), a shoulder closure, or a speed
+   reduction only; set the work zone speed, AADT, trucks, hours and number of days.
+3. **Analyze** returns detours ranked by total cost, the share of traffic worth diverting, queue length
+   over the day, delay, user cost and crash probability, with and without diversion.
+
+How it works (`src/wzm/scenario/`):
+
+| Piece | Method |
+| --- | --- |
+| Road network, detours (`osm.py`, `network.py`) | Overpass download of the area (cached in `data/raw/osm`), Dijkstra on free-flow time with the work zone links removed, alternatives by the iterative penalty method |
+| Capacity, queue (`impacts.py`) | HCM 7 Ch. 10 work zone capacity for lane closures; a calibration factor for shoulder-only closures; 15-minute input-output queue |
+| Delay | Queue delay + reduced-speed delay through the zone + extra detour time |
+| Diversion | Share of traffic (up to `max_share`, within the detour's spare capacity) that minimises total cost |
+| User cost | Delay x value of time (cars x occupancy, trucks per vehicle) + detour vehicle operating cost |
+| Crash risk | Base rate x VMT x crash modification factors, extra risk for miles driven in the queue, Poisson probability of at least one crash, KABCO split and cost |
+
+Every coefficient lives in `config/scenario_defaults.yaml` and can be overridden per request
+(`params`). They are placeholders: replace the hourly profile, crash rates and CMFs with your
+agency's values. Without internet access to Overpass, pass known detours in `detours` instead.
+
+API: `POST /scenario/segment`, `POST /scenario/analyze`, `GET /scenario/defaults` (see `/docs`).
+
 ## Layout
 
 | Path | What it is | State |
@@ -33,6 +61,9 @@ curl -X POST localhost:8000/predict/baseline -H 'content-type: application/json'
 | `src/wzm/models/baseline_hcm.py` | HCM work zone capacity + input-output queue | Working |
 | `src/wzm/models/train.py`, `crash_risk.py` | Boosted models, crash risk | Stubs |
 | `src/wzm/api/main.py` | FastAPI: `/health`, `/streams`, `/predict/baseline`, `/zones` | Baseline works; zones stubbed |
+| `src/wzm/api/scenario.py`, `src/wzm/scenario/` | Scenario analysis: detours, delay, user cost, crash risk | Working; defaults to calibrate |
+| `src/wzm/web/` | Leaflet map UI served at `/map` | Working |
+| `config/scenario_defaults.yaml` | Value of time, CMFs, crash rates, demand profile | Placeholders |
 | `src/wzm/alerts/notify.py` | DMS, 511, email | Stubs |
 | `db/schema.sql` | Segments, work zones, speeds, volumes, crashes, context, predictions | Done |
 

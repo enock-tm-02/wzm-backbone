@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     wzm_database_url: str = "postgresql://wzm:wzm@localhost:5432/wzm"
     wzm_data_dir: Path = Path("./data")
     wzm_streams_file: Path = Path("./config/datastreams.yaml")
+    wzm_scenario_file: Path = Path("./config/scenario_defaults.yaml")
+
+    # Road network for detour routing (OpenStreetMap via Overpass; no key needed)
+    overpass_url: str = "https://overpass-api.de/api/interpreter"
 
     # Work zone events
     wzdx_feed_url: str = ""

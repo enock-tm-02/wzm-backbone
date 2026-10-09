@@ -1,0 +1,52 @@
+# Default parameters for the scenario analysis (src/wzm/scenario).
+# Every number here is a starting value to replace with your agency's figures.
+# The API accepts overrides per request, so nothing here needs a redeploy to test.
+
+demand:
+  # Share of AADT in each hour 0..23 (sums to ~1). Generic urban weekday profile; replace
+  # with your detector or count-station profile for the corridor.
+  hourly_share: [0.010, 0.007, 0.006, 0.006, 0.010, 0.025, 0.055, 0.075, 0.070, 0.055, 0.050, 0.052,
+                 0.054, 0.055, 0.060, 0.070, 0.078, 0.075, 0.060, 0.045, 0.036, 0.030, 0.023, 0.016]
+  directional_split: 0.55     # share of AADT in the analysed direction
+  night_hours: [19, 6]        # hours from 19:00 to 06:00 count as night for HCM f_DN
+
+capacity:
+  # HCM has no work zone method for shoulder-only closures. This factor scales base
+  # per-lane capacity when only the shoulder is closed. Placeholder: calibrate locally.
+  shoulder_closure_factor: 0.93
+  base_lane_capacity_vph:     # undisturbed capacity per lane, used after the closure ends
+    freeway: 2200
+    arterial: 900
+  recovery_hours: 6           # how long to keep simulating after the closure ends for the queue to clear
+
+diversion:
+  max_share: 0.25             # most drivers who will take a detour (compliance with DMS / signing)
+  detour_spare_capacity_share: 0.4  # share of a detour's capacity assumed free for diverted traffic
+  upstream_search_m: 4000     # how far upstream / downstream to look for detour start and end
+  alternatives: 3             # detour candidates to return
+
+value_of_time:
+  # USDOT BCA guidance style values (2022 dollars, verify against the current edition).
+  personal_usd_per_person_hour: 19.40
+  truck_usd_per_vehicle_hour: 33.50
+  car_occupancy: 1.48
+  # Vehicle operating cost for extra detour miles
+  car_voc_usd_per_mile: 0.56
+  truck_voc_usd_per_mile: 1.32
+
+crash:
+  # Base crash rates per million VMT without a work zone. Replace with your state's rates
+  # (or an HSM safety performance function calibrated for the corridor).
+  base_rate_per_mvmt:
+    freeway: 0.9
+    arterial: 2.5
+  # Crash modification factors (CMF) applied to the work zone segment. Placeholders in the
+  # range reported in the literature; replace with CMF Clearinghouse values you trust.
+  cmf_work_zone_presence: 1.35
+  cmf_per_lane_closed_share: 0.5   # CMF = 1 + this * (closed lanes / normal lanes)
+  cmf_shoulder_closure: 1.10
+  cmf_no_barrier: 1.05             # cones / drums instead of positive protection
+  cmf_night: 1.15
+  queue_risk_multiplier: 3.0       # crash rate multiplier for miles driven in the queue upstream of the zone
+  severity_share: {K: 0.005, A: 0.02, B: 0.08, C: 0.15, O: 0.745}   # KABCO split
+  cost_usd: {K: 13200000, A: 1250000, B: 250000, C: 125000, O: 5000}  # per crash, verify edition

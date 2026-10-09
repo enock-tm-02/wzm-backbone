@@ -1,12 +1,24 @@
 """Prediction API. Run: uvicorn wzm.api.main:app --reload"""
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from wzm import __version__
+from wzm.api.scenario import router as scenario_router
 from wzm.models.baseline_hcm import WorkZone, capacity_vph, predict_queue
 from wzm.registry import status
 
 app = FastAPI(title="WZM: Work Zone Impact API", version=__version__)
+app.include_router(scenario_router)
+app.mount("/map", StaticFiles(directory=Path(__file__).parents[1] / "web", html=True), name="map")
+
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    return RedirectResponse("/map/")
 
 
 class PredictRequest(BaseModel):
